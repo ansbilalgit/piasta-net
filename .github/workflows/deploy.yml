@@ -17,10 +17,10 @@ jobs:
         dotnet-version: '8.0.x'
         
     - name: Build
-      run: dotnet build --configuration Release
+      run: dotnet build PiastaNetApp.csproj --configuration Release
       
     - name: Publish
-      run: dotnet publish -c Release -o ./publish
+      run: dotnet publish PiastaNetApp.csproj -c Release -o ./publish
       
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
