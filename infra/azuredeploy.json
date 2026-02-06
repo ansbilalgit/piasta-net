@@ -113,13 +113,19 @@
         "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
       ],
       "sku": {
-        "name": "[parameters('sqlDatabaseSku')]",
-        "tier": "[parameters('sqlDatabaseSku')]"
+        "name": "GP_S_Gen5",
+        "tier": "GeneralPurpose",
+        "family": "Gen5",
+        "capacity": 1
       },
       "properties": {
         "collation": "SQL_Latin1_General_CP1_CI_AS",
-        "maxSizeBytes": 2147483648,
-        "catalogCollation": "SQL_Latin1_General_CP1_CI_AS"
+        "maxSizeBytes": 34359738368,
+        "autoPauseDelay": 60,
+        "minCapacity": 0.5,
+        "isLedgerOn": false,
+        "useFreeLimit": true,
+        "freeLimitExhaustionBehavior": "AutoPause"
       }
     },
     {
