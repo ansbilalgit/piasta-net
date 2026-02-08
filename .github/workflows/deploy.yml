@@ -17,10 +17,10 @@ jobs:
         dotnet-version: '8.0.x'
         
     - name: Build
-      run: dotnet build PiastaNetApp.csproj --configuration Release
+      run: dotnet build ${{ env.BACKEND_PATH }}/${{ env.BACKEND_BUILD_FILE }} --configuration Release
       
     - name: Publish
-      run: dotnet publish PiastaNetApp.csproj -c Release -o ./publish
+      run: dotnet publish ${{ env.BACKEND_PATH }}/${{ env.BACKEND_BUILD_FILE }} -c Release -o ./publish
       
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
