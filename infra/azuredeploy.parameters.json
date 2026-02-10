@@ -17,9 +17,6 @@
     "sqlAdministratorLogin": {
       "value": "sqladmin"
     },
-    "sqlAdministratorPassword": {
-      "value": "vGmGJ52zcYy$8WY@D#eziHn6Y3SLj#Zu"
-    },
     "databaseName": {
       "value": "piasta-net-db"
     },
