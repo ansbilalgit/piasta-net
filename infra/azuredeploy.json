@@ -2,10 +2,22 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "webAppName": {
+    "frontendAppName": {
       "type": "string",
       "metadata": {
-        "description": "Name of the web application (must be globally unique)"
+        "description": "Name of the front-end web application (must be globally unique)"
+      }
+    },
+    "backendAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the back-end web application (must be globally unique)"
+      }
+    },
+    "appServiceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the app service holding the web apps (must be globally unique)"
       }
     },
     "sqlServerName": {
@@ -58,8 +70,10 @@
     }
   },
   "variables": {
-    "appServicePlanName": "[concat(parameters('webAppName'), '-plan')]",
-    "appInsightsName": "[concat(parameters('webAppName'), '-insights')]"
+    "appServicePlanName": "[parameters('appServiceName')]",
+    "appInsightsName": "[concat(parameters('appServiceName'), '-insights')]",
+    "frontendInsightsName": "[concat(parameters('frontendAppName'), '-insights')]",
+    "backendInsightsName": "[concat(parameters('backendAppName'), '-insights')]"
   },
   "resources": [
     {
@@ -75,10 +89,41 @@
     {
       "type": "Microsoft.Web/sites",
       "apiVersion": "2022-03-01",
-      "name": "[parameters('webAppName')]",
+      "name": "[parameters('frontendAppName')]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('frontendInsightsName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "REACT_APP_API_URL",
+              "value": "[concat('https://', parameters('backendAppName'), '.azurewebsites.net')]"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('frontendInsightsName'))).InstrumentationKey]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('frontendInsightsName'))).ConnectionString]"
+            }
+          ],
+          "nodeVersion": "20-lts"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('backendAppName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('backendInsightsName'))]"
       ],
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
@@ -88,6 +133,16 @@
             {
               "name": "CURRENT_STACK",
               "value": "dotnet"
+            }
+          ],
+          "appSettings": [
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('backendInsightsName'))).InstrumentationKey]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('backendInsightsName'))).ConnectionString]"
             }
           ]
         }
@@ -143,9 +198,9 @@
     {
       "type": "Microsoft.Web/sites/config",
       "apiVersion": "2022-03-01",
-      "name": "[format('{0}/{1}', parameters('webAppName'), 'connectionstrings')]",
+      "name": "[format('{0}/{1}', parameters('backendAppName'), 'connectionstrings')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]",
+        "[resourceId('Microsoft.Web/sites', parameters('backendAppName'))]",
         "[resourceId('Microsoft.Sql/servers/databases', parameters('sqlServerName'), parameters('databaseName'))]"
       ],
       "properties": {
@@ -158,19 +213,34 @@
     {
       "type": "Microsoft.Insights/components",
       "apiVersion": "2020-02-02",
-      "name": "[variables('appInsightsName')]",
+      "name": "[variables('backendInsightsName')]",
       "location": "[parameters('location')]",
       "kind": "web",
       "properties": {
         "Application_Type": "web",
-        "ApplicationId": "[parameters('webAppName')]"
+        "ApplicationId": "[parameters('backendAppName')]"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('frontendInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "ApplicationId": "[parameters('frontendAppName')]"
       }
     }
   ],
   "outputs": {
-    "webAppUrl": {
+    "frontendUrl": {
       "type": "string",
-      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('webAppName'))).defaultHostName)]"
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('frontendAppName'))).defaultHostName)]"
+    },
+    "backendUrl": {
+      "type": "string",
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('backendAppName'))).defaultHostName)]"
     },
     "sqlServerFqdn": {
       "type": "string",
