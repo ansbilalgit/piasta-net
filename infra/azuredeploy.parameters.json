@@ -2,17 +2,20 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "webAppName": {
+    "frontendAppName": {
+      "value": "piasta-net-frontend"
+    },
+    "backendAppName": {
       "value": "piasta-net-app"
+    },
+    "appServiceName": {
+      "value": "piasta-net-app-plan"
     },
     "sqlServerName": {
       "value": "piasta-net-sql"
     },
     "sqlAdministratorLogin": {
       "value": "sqladmin"
-    },
-    "sqlAdministratorPassword": {
-      "value": ""
     },
     "databaseName": {
       "value": "piasta-net-db"
