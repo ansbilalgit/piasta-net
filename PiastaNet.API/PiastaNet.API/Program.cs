@@ -1,39 +1,93 @@
 using Microsoft.EntityFrameworkCore;
 using PiastaNet.API.Data;
-using PiastaNet.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ---- Logging (helps in Log Stream + App Insights if enabled)
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+// ---- Controllers (NOT minimal APIs)
 builder.Services.AddControllers();
+
+// ---- Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// ---- CORS
+const string CorsPolicyName = "PiastaCors";
 
-builder.Services.AddScoped<IItemsService, ItemsService>();
-builder.Services.AddScoped<ILibraryTypeService, LibraryTypeService>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        // Simple safe default during dev:
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+
+        // If you want credentials (cookies/auth), you must NOT use AllowAnyOrigin.
+        // Instead:
+        // policy.WithOrigins("https://your-frontend.com").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+    });
+});
+
+// ---- DbContext (add EnableRetryOnFailure since your DB is serverless/pauses)
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure(
+            maxRetryCount: 10,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null
+        ));
+});
 
 var app = builder.Build();
 
+// ---- Swagger
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.MapControllers();
+// ---- CORS (place before auth and MapControllers)
+app.UseCors(CorsPolicyName);
 
-// Migrate + Seed
-using (var scope = app.Services.CreateScope())
+// ---- Optional: HTTPS redirection
+app.UseHttpsRedirection();
+
+// ---- Optional auth
+// app.UseAuthentication();
+app.UseAuthorization();
+
+// ---- Welcome page at "/"
+app.MapGet("/", () =>
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var html = """
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Piasta API</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    a { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Hello and welcome to Piasta API</h2>
+  <p>
+    <a href="/swagger">Click here to see swagger documentation</a>
+  </p>
+</body>
+</html>
+""";
+    return Results.Content(html, "text/html");
+});
 
-    await db.Database.MigrateAsync();
-
-    var sqlitePathFromConfig = builder.Configuration.GetConnectionString("SqliteSeedPath") ?? "database.sqlite";
-    var sqlitePath = Path.IsPathRooted(sqlitePathFromConfig)
-        ? sqlitePathFromConfig
-        : Path.Combine(AppContext.BaseDirectory, sqlitePathFromConfig);
-
-    await SqliteSeeder.SeedFromSqliteAsync(db, sqlitePath);
-}
+// ---- Controllers routes
+app.MapControllers();
 
 app.Run();
