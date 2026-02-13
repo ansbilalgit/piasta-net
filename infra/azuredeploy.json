@@ -17,7 +17,13 @@
     "appServiceName": {
       "type": "string",
       "metadata": {
-        "description": "Name of the app service holding the web apps (must be globally unique)"
+        "description": "Name of the app service holding the backend web app (must be globally unique)"
+      }
+    },
+    "frontendAppServicePlanName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Linux app service plan for frontend (must be globally unique)"
       }
     },
     "sqlServerName": {
@@ -60,6 +66,14 @@
         "description": "App Service Plan pricing tier"
       }
     },
+    "frontendAppServicePlanSku": {
+      "type": "string",
+      "defaultValue": "F1",
+      "allowedValues": ["F1", "B1", "B2", "S1", "S2"],
+      "metadata": {
+        "description": "Frontend App Service Plan pricing tier"
+      }
+    },
     "sqlDatabaseSku": {
       "type": "string",
       "defaultValue": "Basic",
@@ -87,20 +101,36 @@
       "properties": {}
     },
     {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('frontendAppServicePlanName')]",
+      "location": "[parameters('location')]",
+      "kind": "linux",
+      "sku": {
+        "name": "[parameters('frontendAppServicePlanSku')]"
+      },
+      "properties": {
+        "reserved": true
+        }
+    },
+    {
       "type": "Microsoft.Web/sites",
       "apiVersion": "2022-03-01",
       "name": "[parameters('frontendAppName')]",
       "location": "[parameters('location')]",
+      "kind": "app,linux",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Web/serverfarms', parameters('frontendAppServicePlanName'))]",
         "[resourceId('Microsoft.Insights/components', variables('frontendInsightsName'))]"
       ],
       "properties": {
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('frontendAppServicePlanName'))]",
         "siteConfig": {
+          "linuxFxVersion": "NODE|20-lts",
+          "appCommandLine": "node server.js",
           "appSettings": [
             {
-              "name": "REACT_APP_API_URL",
+              "name": "NEXT_PUBLIC_API_URL",
               "value": "[concat('https://', parameters('backendAppName'), '.azurewebsites.net')]"
             },
             {
@@ -110,9 +140,16 @@
             {
               "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
               "value": "[reference(resourceId('Microsoft.Insights/components', variables('frontendInsightsName'))).ConnectionString]"
+            },
+            {
+              "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+              "value": "false"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "20-lts"
             }
-          ],
-          "nodeVersion": "20-lts"
+          ]
         }
       }
     },
