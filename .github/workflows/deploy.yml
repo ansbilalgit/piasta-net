@@ -3,6 +3,9 @@ name: Deploy to Azure
 on:
   push:
     branches: [ main ]
+  
+    # Ignore changes in the 'infra' directory to prevent unnecessary deployments
+    paths-ignore: 'infra/**'
 
 jobs:
   build-and-deploy:
