@@ -2,14 +2,26 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "location": {
+      "value": "germanywestcentral"
+    },
     "frontendAppName": {
       "value": "piasta-net-frontend"
     },
     "backendAppName": {
       "value": "piasta-net-app"
     },
+    "frontendAppServicePlanName": {
+      "value": "piasta-net-frontend-plan"
+    },
     "appServiceName": {
       "value": "piasta-net-app-plan"
+    },
+    "frontendAppServicePlanSku": {
+      "value": "F1"
+    },
+    "appServicePlanSku": {
+      "value": "F1"
     },
     "sqlServerName": {
       "value": "piasta-net-sql"
@@ -19,12 +31,6 @@
     },
     "databaseName": {
       "value": "piasta-net-db"
-    },
-    "location": {
-      "value": "germanywestcentral"
-    },
-    "appServicePlanSku": {
-      "value": "F1"
     },
     "sqlDatabaseSku": {
       "value": "Basic"
