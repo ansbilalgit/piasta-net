@@ -10,7 +10,9 @@ namespace PiastaNet.API.DTOs
         string? Thumbnail,
         ItemType Type,
         int? Copies,
-        List<string> Categories
+        List<string> Categories,
+        int? MinPlayers,
+        int? MaxPlayers
     );
 
     public record ItemBaseCreateDto(
