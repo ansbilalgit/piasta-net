@@ -30,6 +30,8 @@ namespace PiastaNet.API.Services
 
             IQueryable<Item> query = _db.Items
                 .Include(i => i.Categories)
+                .Include(i => i.Boardgame)
+                .Include(i => i.Videogame)
                 .AsNoTracking();
 
             // Filter: search
@@ -86,7 +88,9 @@ namespace PiastaNet.API.Services
                     i.Thumbnail,
                     i.Type,
                     i.Copies,
-                    i.Categories.Select(c => c.Name).ToList()
+                    i.Categories.Select(c => c.Name).ToList(),
+                    i.Type == ItemType.Boardgame ? i.Boardgame != null ? i.Boardgame.MinPlayers : null : (int?) (i.Videogame != null ? i.Videogame.MinPlayers : null),
+                    i.Type == ItemType.Boardgame ? i.Boardgame != null ? i.Boardgame.MaxPlayers : null : (int?) (i.Videogame != null ? i.Videogame.MaxPlayers : null)
                 ))
                 .ToListAsync(ct);
 
