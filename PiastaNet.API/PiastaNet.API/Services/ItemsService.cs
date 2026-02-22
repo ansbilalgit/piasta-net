@@ -89,21 +89,33 @@ namespace PiastaNet.API.Services
                     i.Type,
                     i.Copies,
                     i.Categories.Select(c => c.Name).ToList(),
-                    i.Type == ItemType.Boardgame ? i.Boardgame != null ? i.Boardgame.MinPlayers : null : (int?) (i.Videogame != null ? i.Videogame.MinPlayers : null),
-                    i.Type == ItemType.Boardgame ? i.Boardgame != null ? i.Boardgame.MaxPlayers : null : (int?) (i.Videogame != null ? i.Videogame.MaxPlayers : null)
+                    i.Type == ItemType.Boardgame ? i.Boardgame != null ? i.Boardgame.MinPlayers : null : (int?)(i.Videogame != null ? i.Videogame.MinPlayers : null),
+                    i.Type == ItemType.Boardgame ? i.Boardgame != null ? i.Boardgame.MaxPlayers : null : (int?)(i.Videogame != null ? i.Videogame.MaxPlayers : null)
                 ))
                 .ToListAsync(ct);
 
             return new PagedResult<ItemListDto>(page, pageSize, totalCount, items);
         }
 
-        public Task<Item?> GetByIdAsync(int id, CancellationToken ct)
-            => _db.Items
+        public Task<ItemListDto?> GetByIdAsync(int id, CancellationToken ct)
+            => _db.Items.Where(i => i.Id == id)
                 .Include(i => i.Categories)
                 .Include(i => i.Boardgame)
                 .Include(i => i.Videogame)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(i => i.Id == id, ct);
+            .Select(i => new ItemListDto(
+                    i.Id,
+                    i.Name,
+                    i.Length,
+                    i.Description,
+                    i.Thumbnail,
+                    i.Type,
+                    i.Copies,
+                    i.Categories.Select(c => c.Name).ToList(),
+                    i.Type == ItemType.Boardgame ? i.Boardgame != null ? i.Boardgame.MinPlayers : null : (int?)(i.Videogame != null ? i.Videogame.MinPlayers : null),
+                    i.Type == ItemType.Boardgame ? i.Boardgame != null ? i.Boardgame.MaxPlayers : null : (int?)(i.Videogame != null ? i.Videogame.MaxPlayers : null)
+                ))
+                .FirstOrDefaultAsync(ct);
 
         public async Task<bool> DeleteAsync(int id, CancellationToken ct)
         {
