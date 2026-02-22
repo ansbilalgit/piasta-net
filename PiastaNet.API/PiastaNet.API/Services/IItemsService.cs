@@ -15,7 +15,7 @@ namespace PiastaNet.API.Services
         int page,
         int pageSize,
         CancellationToken ct);
-        Task<Item?> GetByIdAsync(int id, CancellationToken ct);
+        Task<ItemListDto?> GetByIdAsync(int id, CancellationToken ct);
         Task<bool> DeleteAsync(int id, CancellationToken ct);
     }
 }
