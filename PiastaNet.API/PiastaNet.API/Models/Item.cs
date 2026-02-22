@@ -24,5 +24,6 @@ namespace PiastaNet.API.Models
 
         public Boardgame? Boardgame { get; set; }
         public Videogame? Videogame { get; set; }
+        public ICollection<GameEvent> GameEvents { get; set; }
     }
 }
