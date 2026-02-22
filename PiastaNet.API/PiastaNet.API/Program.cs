@@ -38,6 +38,8 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddScoped<IItemsService, ItemsService>();
 builder.Services.AddScoped<ILibraryTypeService, LibraryTypeService>();
+builder.Services.AddScoped<IGameEventService, GameEventService>();
+
 
 // ---- DbContext (add EnableRetryOnFailure since your DB is serverless/pauses)
 builder.Services.AddDbContext<AppDbContext>(options =>

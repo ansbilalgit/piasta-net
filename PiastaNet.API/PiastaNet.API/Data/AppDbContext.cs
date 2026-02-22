@@ -11,6 +11,7 @@ namespace PiastaNet.API.Data
         public DbSet<Category> Categories => Set<Category>();
         public DbSet<Boardgame> Boardgames => Set<Boardgame>();
         public DbSet<Videogame> Videogames => Set<Videogame>();
+        public DbSet<GameEvent> GameEvents => Set<GameEvent>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Item>().ToTable("items");
@@ -73,6 +74,19 @@ namespace PiastaNet.API.Data
                     .WithOne(i => i.Videogame)
                     .HasForeignKey<Videogame>(x => x.Id)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<GameEvent>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.Game)
+                      .WithMany(g => g.GameEvents)
+                      .HasForeignKey(e => e.GameId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.Property(e => e.OwnerUserId)
+                      .IsRequired()
+                      .HasMaxLength(100);
             });
         }
     }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PiastaNet.API.Data;
 
@@ -11,9 +12,11 @@ using PiastaNet.API.Data;
 namespace PiastaNet.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260222202420_AddGameEvents")]
+    partial class AddGameEvents
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -104,7 +107,7 @@ namespace PiastaNet.API.Migrations
 
                     b.HasIndex("GameId");
 
-                    b.ToTable("GameEvents");
+                    b.ToTable("GameEvent");
                 });
 
             modelBuilder.Entity("PiastaNet.API.Models.Item", b =>
