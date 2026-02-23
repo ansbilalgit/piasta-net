@@ -136,5 +136,120 @@ namespace PiastaNet.API.Services
                 })
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<PagedResult<GameEventResponseDto>> GetAllAsync(
+    string? q,
+    int? gameId,
+    string? ownerUserId,
+    DateTime? from,
+    DateTime? to,
+    bool? upcomingOnly,
+    bool? pastOnly,
+    int? minPlayers,
+    int? maxPlayers,
+    bool? hasAvailableSlots,
+    string? sortBy,
+    string? sortDir,
+    int page,
+    int pageSize,
+    CancellationToken ct)
+        {
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize < 1 ? 20 : pageSize;
+            pageSize = Math.Min(pageSize, 100);
+
+            IQueryable<GameEvent> query = _context.GameEvents
+                .Include(e => e.Game)
+                //.Include(e => e.Participants) // if you track participants
+                .AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var s = q.Trim();
+                query = query.Where(e => e.Game.Name.Contains(s));
+            }
+
+            if (gameId.HasValue)
+                query = query.Where(e => e.GameId == gameId.Value);
+
+            if (!string.IsNullOrWhiteSpace(ownerUserId))
+                query = query.Where(e => e.OwnerUserId == ownerUserId);
+
+            if (from.HasValue)
+                query = query.Where(e => e.StartTime >= from.Value);
+
+            if (to.HasValue)
+                query = query.Where(e => e.EndTime <= to.Value);
+
+            if (upcomingOnly == true)
+                query = query.Where(e => e.StartTime > DateTime.UtcNow);
+
+            if (pastOnly == true)
+                query = query.Where(e => e.EndTime < DateTime.UtcNow);
+
+            if (minPlayers.HasValue)
+                query = query.Where(e => e.MinNumberOfPlayers >= minPlayers.Value);
+
+            if (maxPlayers.HasValue)
+                query = query.Where(e => e.MaxNumberOfPlayers <= maxPlayers.Value);
+
+            
+            //if (hasAvailableSlots == true)
+            //{
+            //    query = query.Where(e =>
+            //        e.Participants.Count < e.MaxNumberOfPlayers);
+            //}
+
+            // 🔃 Sorting
+            var desc = string.Equals(sortDir, "desc", StringComparison.OrdinalIgnoreCase);
+
+            query = (sortBy?.Trim().ToLowerInvariant()) switch
+            {
+                "starttime" => desc
+                    ? query.OrderByDescending(e => e.StartTime)
+                    : query.OrderBy(e => e.StartTime),
+
+                "endtime" => desc
+                    ? query.OrderByDescending(e => e.EndTime)
+                    : query.OrderBy(e => e.EndTime),
+
+                "game" => desc
+                    ? query.OrderByDescending(e => e.Game.Name)
+                    : query.OrderBy(e => e.Game.Name),
+
+                "minplayers" => desc
+                    ? query.OrderByDescending(e => e.MinNumberOfPlayers)
+                    : query.OrderBy(e => e.MinNumberOfPlayers),
+
+                "maxplayers" => desc
+                    ? query.OrderByDescending(e => e.MaxNumberOfPlayers)
+                    : query.OrderBy(e => e.MaxNumberOfPlayers),
+
+                _ => desc
+                    ? query.OrderByDescending(e => e.Id)
+                    : query.OrderBy(e => e.Id)
+            };
+
+            var totalCount = await query.CountAsync(ct);
+
+            var items = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(e => new GameEventResponseDto
+                {
+                    Id = e.Id,
+                    GameId = e.GameId,
+                    GameName = e.Game.Name,
+                    StartTime = e.StartTime,
+                    EndTime = e.EndTime,
+                    MinNumberOfPlayers = e.MinNumberOfPlayers,
+                    MaxNumberOfPlayers = e.MaxNumberOfPlayers,
+                    OwnerUserId = e.OwnerUserId,
+                    CreatedAt = e.CreatedAt
+                })
+                .ToListAsync(ct);
+
+            return new PagedResult<GameEventResponseDto>(page, pageSize, totalCount, items);
+        }
     }
 }
