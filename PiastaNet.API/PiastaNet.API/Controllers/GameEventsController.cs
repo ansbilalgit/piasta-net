@@ -14,6 +14,43 @@ namespace PiastaNet.API.Controllers
         {
             _service = service;
         }
+        [HttpGet]
+        public async Task<IActionResult> GetAll(
+    [FromQuery] string? q,
+    [FromQuery] int? gameId,
+    [FromQuery] string? ownerUserId,
+    [FromQuery] DateTime? from,
+    [FromQuery] DateTime? to,
+    [FromQuery] bool? upcomingOnly,
+    [FromQuery] bool? pastOnly,
+    [FromQuery] int? minPlayers,
+    [FromQuery] int? maxPlayers,
+    [FromQuery] bool? hasAvailableSlots,
+    [FromQuery] string? sortBy,
+    [FromQuery] string? sortDir,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken ct = default)
+        {
+            var result = await _service.GetAllAsync(
+                q,
+                gameId,
+                ownerUserId,
+                from,
+                to,
+                upcomingOnly,
+                pastOnly,
+                minPlayers,
+                maxPlayers,
+                hasAvailableSlots,
+                sortBy,
+                sortDir,
+                page,
+                pageSize,
+                ct);
+
+            return Ok(result);
+        }
 
         [HttpPost]
         public async Task<IActionResult> Create(CreateGameEventDto dto)
