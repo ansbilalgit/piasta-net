@@ -82,5 +82,19 @@ namespace PiastaNet.API.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost("add-participant")]
+        public async Task<IActionResult> AddParticipant([FromBody] RegisterParticipantDto dto)
+        {
+            await _service.AddParticipantAsync(dto);
+            return Ok();
+        }
+
+        [HttpPost("remove-participant")]
+        public async Task<IActionResult> RemoveParticipant([FromBody] RegisterParticipantDto dto)
+        {
+            await _service.RemoveParticipantAsync(dto);
+            return Ok();
+        }
     }
 }

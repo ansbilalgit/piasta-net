@@ -16,5 +16,7 @@
         public string OwnerUserId { get; set; }
 
         public DateTime CreatedAt { get; set; }
+        public ICollection<GameEventParticipant> Participants { get; set; } = new List<GameEventParticipant>();
+
     }
 }

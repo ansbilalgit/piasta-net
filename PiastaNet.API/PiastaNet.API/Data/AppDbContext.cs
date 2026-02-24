@@ -88,6 +88,16 @@ namespace PiastaNet.API.Data
                       .IsRequired()
                       .HasMaxLength(100);
             });
+
+            // GameEventParticipant
+            modelBuilder.Entity<GameEventParticipant>()
+                .HasKey(p => new { p.GameEventId, p.ParticipantUserId, p.RequestedByUserId });
+
+            modelBuilder.Entity<GameEventParticipant>()
+                .HasOne(p => p.GameEvent)
+                .WithMany(e => e.Participants)
+                .HasForeignKey(p => p.GameEventId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
