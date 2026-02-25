@@ -1,7 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PiastaNet.API.Data;
 using PiastaNet.API.DTOs;
 using PiastaNet.API.Models;
+using PiastaNet.API.Services;
 
 namespace PiastaNet.API.Services
 {
@@ -121,6 +123,7 @@ namespace PiastaNet.API.Services
         public async Task<GameEventResponseDto> GetByIdAsync(Guid id)
         {
             return await _context.GameEvents
+                .Include(e => e.Participants)
                 .Where(e => e.Id == id)
                 .Select(e => new GameEventResponseDto
                 {
@@ -132,7 +135,8 @@ namespace PiastaNet.API.Services
                     MinNumberOfPlayers = e.MinNumberOfPlayers,
                     MaxNumberOfPlayers = e.MaxNumberOfPlayers,
                     OwnerUserId = e.OwnerUserId,
-                    CreatedAt = e.CreatedAt
+                    CreatedAt = e.CreatedAt,
+                    Participants = e.Participants.Select(p => p.ParticipantUserId).Distinct().ToList()
                 })
                 .FirstOrDefaultAsync();
         }
@@ -245,11 +249,74 @@ namespace PiastaNet.API.Services
                     MinNumberOfPlayers = e.MinNumberOfPlayers,
                     MaxNumberOfPlayers = e.MaxNumberOfPlayers,
                     OwnerUserId = e.OwnerUserId,
-                    CreatedAt = e.CreatedAt
+                    CreatedAt = e.CreatedAt,
+                    Participants = e.Participants.Select(p => p.ParticipantUserId).Distinct().ToList()
                 })
                 .ToListAsync(ct);
 
             return new PagedResult<GameEventResponseDto>(page, pageSize, totalCount, items);
+        }
+    
+    
+    public async Task AddParticipantAsync(RegisterParticipantDto dto)
+        {
+
+            var gameEvent = await _context.GameEvents
+                .Include(e => e.Participants)
+                .FirstOrDefaultAsync(e => e.Id == dto.GameEventID);
+
+            if (gameEvent == null)
+                throw new Exception("GameEvent not found.");
+
+            // Only owner or self
+            if (dto.RequestingUserID != gameEvent.OwnerUserId &&
+                dto.RequestingUserID != dto.ParticipantUserID)
+                throw new UnauthorizedAccessException();
+
+            // Max player check
+            var uniqueCount = gameEvent.Participants.Select(p => p.ParticipantUserId).Distinct().Count();
+            if (uniqueCount >= gameEvent.MaxNumberOfPlayers)
+                throw new Exception("Max players reached.");
+
+            // Prevent duplicate participant-requestedBy pair
+            if (!gameEvent.Participants.Any(p =>
+                    p.ParticipantUserId == dto.ParticipantUserID &&
+                    p.RequestedByUserId == dto.RequestingUserID))
+            {
+                gameEvent.Participants.Add(new GameEventParticipant
+                {
+                    GameEventId = gameEvent.Id,
+                    ParticipantUserId = dto.ParticipantUserID,
+                    RequestedByUserId = dto.RequestingUserID
+                });
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task RemoveParticipantAsync(RegisterParticipantDto dto)
+        {
+
+            var gameEvent = await _context.GameEvents
+                .Include(e => e.Participants)
+                .FirstOrDefaultAsync(e => e.Id == dto.GameEventID);
+
+            if (gameEvent == null)
+                throw new Exception("GameEvent not found.");
+
+            // Only owner or self
+            if (dto.RequestingUserID != gameEvent.OwnerUserId &&
+                dto.RequestingUserID != dto.ParticipantUserID)
+                throw new UnauthorizedAccessException();
+
+            var participant = gameEvent.Participants
+                .FirstOrDefault(p => p.ParticipantUserId == dto.ParticipantUserID);
+
+            if (participant != null)
+            {
+                gameEvent.Participants.Remove(participant);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

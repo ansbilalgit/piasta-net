@@ -16,5 +16,6 @@
         public string OwnerUserId { get; set; }
 
         public DateTime CreatedAt { get; set; }
+        public  List<string>? Participants { get; set; }
     }
 }

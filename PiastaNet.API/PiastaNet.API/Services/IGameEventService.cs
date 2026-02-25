@@ -24,5 +24,8 @@ namespace PiastaNet.API.Services
     int page,
     int pageSize,
     CancellationToken ct);
+
+        Task AddParticipantAsync(RegisterParticipantDto dto);
+        Task RemoveParticipantAsync(RegisterParticipantDto dto);
     }
 }

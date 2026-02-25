@@ -11,4 +11,11 @@
 
         public string OwnerUserId { get; set; }
     }
+
+    public record RegisterParticipantDto(
+    Guid GameEventID,
+    string ParticipantUserID,
+    string RequestingUserID
+);
+
 }
