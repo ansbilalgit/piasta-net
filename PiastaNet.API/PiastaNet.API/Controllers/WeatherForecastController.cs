@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PiastaNet.API.Controllers
@@ -29,6 +30,20 @@ namespace PiastaNet.API.Controllers
                 Summary = Summaries[Random.Shared.Next(Summaries.Length)]
             })
             .ToArray();
+        }
+
+        [Authorize] // This ensures the token is valid before the code runs
+        [HttpGet("profile")]
+        public IActionResult GetUserProfile()
+        {
+            // Method A: Get the Username
+            var username = User.Identity?.Name;
+
+            return Ok(new
+            {
+                Message = $"Hello {username}!",
+                Username = username
+            });
         }
     }
 }
