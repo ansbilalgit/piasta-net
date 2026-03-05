@@ -80,13 +80,21 @@ builder.Services.AddScoped<IGameEventService, GameEventService>();
 // ---- DbContext (add EnableRetryOnFailure since your DB is serverless/pauses)
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => sql.EnableRetryOnFailure(
-            maxRetryCount: 10,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorNumbersToAdd: null
-        ));
+    if (builder.Environment.IsDevelopment())
+    {
+        // Use the In-Memory database for local dev
+        options.UseInMemoryDatabase("LocalDb");
+    }
+    else
+    {
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            sql => sql.EnableRetryOnFailure(
+                maxRetryCount: 10,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null
+            ));
+    }
 });
 builder.Services.AddIdentity<IdentityUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
@@ -266,7 +274,17 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+    // Check if the provider is Relational (SQL Server, SQLite, etc.)
+    if (db.Database.IsRelational())
+    {
+        // This only runs for SQL Server, NOT In-Memory
+        db.Database.Migrate();
+    }
+    else
+    {
+        // This ensures the In-Memory schema is created without using Migrations
+        db.Database.EnsureCreated();
+    }
     var sqlitePathFromConfig = builder.Configuration.GetConnectionString("SqliteSeedPath") ?? "database.sqlite";
     var sqlitePath = Path.IsPathRooted(sqlitePathFromConfig)
         ? sqlitePathFromConfig
