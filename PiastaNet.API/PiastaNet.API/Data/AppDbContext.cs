@@ -1,9 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PiastaNet.API.Models;
 
 namespace PiastaNet.API.Data
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext : IdentityDbContext<IdentityUser>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -14,6 +16,7 @@ namespace PiastaNet.API.Data
         public DbSet<GameEvent> GameEvents => Set<GameEvent>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<Item>().ToTable("items");
             modelBuilder.Entity<Category>().ToTable("categories");
             modelBuilder.Entity<Boardgame>().ToTable("boardgames");
