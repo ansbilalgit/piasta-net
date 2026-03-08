@@ -69,9 +69,9 @@ namespace PiastaNet.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id, [FromQuery] string ownerUserId)
+        public async Task<IActionResult> Delete(Guid id)
         {
-            await _service.DeleteAsync(id, ownerUserId);
+            await _service.DeleteAsync(id);
             return NoContent();
         }
 

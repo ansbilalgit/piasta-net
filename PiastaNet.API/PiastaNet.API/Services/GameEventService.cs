@@ -105,7 +105,7 @@ namespace PiastaNet.API.Services
             return await GetByIdAsync(entity.Id);
         }
 
-        public async Task DeleteAsync(Guid id, string ownerUserId)
+        public async Task DeleteAsync(Guid id)
         {
             var entity = await _context.GameEvents
                 .FirstOrDefaultAsync(e => e.Id == id);
@@ -113,7 +113,7 @@ namespace PiastaNet.API.Services
             if (entity == null)
                 throw new Exception("Game event not found");
 
-            if (entity.OwnerUserId != ownerUserId)
+            if (entity.OwnerUserId != GetCurrentUserId())
                 throw new UnauthorizedAccessException("Only owner can delete");
 
             _context.GameEvents.Remove(entity);

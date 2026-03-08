@@ -1,11 +1,14 @@
 ﻿
 
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using PiastaNet.API.Data;
 using PiastaNet.API.DTOs;
 using PiastaNet.API.Models;
 using PiastaNet.API.Services;
+using System.Security.Claims;
 
 namespace PiastaNet.Tests;
 
@@ -13,11 +16,23 @@ public class GameEventServiceTests
 {
     private readonly AppDbContext _context;
     private readonly GameEventService _service;
-
+    private readonly Mock<IHttpContextAccessor> _mockAccessor;
+    private readonly string testUser = "TestUser";
     public GameEventServiceTests()
     {
-        _context = TestDbContextFactory.Create();
-        _service = new GameEventService(_context);
+        _context = TestDbContextFactory.Create(); _mockAccessor = new Mock<IHttpContextAccessor>();
+
+        // Create a fake User identity with the username "TestUser"
+        var claims = new[] { new Claim(ClaimTypes.Name, testUser) };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var user = new ClaimsPrincipal(identity);
+
+        // Setup the mock to return an HttpContext containing our fake user
+        var httpContext = new DefaultHttpContext { User = user };
+        _mockAccessor.Setup(_ => _.HttpContext).Returns(httpContext);
+
+        // Pass the .Object into your service
+        _service = new GameEventService(_context, _mockAccessor.Object);
     }
 
     private async Task SeedGame(int gameId = 1)
@@ -51,14 +66,13 @@ public class GameEventServiceTests
             GameId = 1,
             StartTime = DateTime.UtcNow.AddHours(1),
             EndTime = DateTime.UtcNow.AddHours(2),
-            OwnerUserId = "owner1"
         };
 
         var result = await _service.CreateAsync(dto);
 
         result.Should().NotBeNull();
         result.GameId.Should().Be(1);
-        result.OwnerUserId.Should().Be("owner1");
+        result.OwnerUserId.Should().Be(testUser);
     }
 
     [Fact]
@@ -69,7 +83,6 @@ public class GameEventServiceTests
             GameId = 999,
             StartTime = DateTime.UtcNow.AddHours(1),
             EndTime = DateTime.UtcNow.AddHours(2),
-            OwnerUserId = "owner1"
         };
 
         Func<Task> act = async () => await _service.CreateAsync(dto);
@@ -88,7 +101,6 @@ public class GameEventServiceTests
             GameId = 1,
             StartTime = DateTime.UtcNow.AddHours(3),
             EndTime = DateTime.UtcNow.AddHours(1),
-            OwnerUserId = "owner1"
         };
 
         Func<Task> act = async () => await _service.CreateAsync(dto);
@@ -110,38 +122,17 @@ public class GameEventServiceTests
         {
             GameId = 1,
             StartTime = DateTime.UtcNow.AddHours(1),
-            EndTime = DateTime.UtcNow.AddHours(2),
-            OwnerUserId = "owner1"
+            EndTime = DateTime.UtcNow.AddHours(2)
         };
 
         var created = await _service.CreateAsync(createDto);
 
-        await _service.DeleteAsync(created.Id, "owner1");
+        await _service.DeleteAsync(created.Id);
 
         var entity = await _context.GameEvents.FindAsync(created.Id);
         entity.Should().BeNull();
     }
 
-    [Fact]
-    public async Task DeleteAsync_Should_Throw_When_Not_Owner()
-    {
-        await SeedGame();
-
-        var createDto = new CreateGameEventDto
-        {
-            GameId = 1,
-            StartTime = DateTime.UtcNow.AddHours(1),
-            EndTime = DateTime.UtcNow.AddHours(2),
-            OwnerUserId = "owner1"
-        };
-
-        var created = await _service.CreateAsync(createDto);
-
-        Func<Task> act = async () =>
-            await _service.DeleteAsync(created.Id, "otherUser");
-
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
-    }
 
     // =========================================
     // PARTICIPANT TESTS
@@ -159,13 +150,11 @@ public class GameEventServiceTests
         {
             GameId = 1,
             StartTime = DateTime.UtcNow.AddHours(1),
-            EndTime = DateTime.UtcNow.AddHours(2),
-            OwnerUserId = "owner1"
+            EndTime = DateTime.UtcNow.AddHours(2)
         });
 
         var dto = new RegisterParticipantDto(
             created.Id,
-            "user2",
             "user2"
         );
 
@@ -187,7 +176,6 @@ public class GameEventServiceTests
             GameId = 1,
             StartTime = DateTime.UtcNow.AddHours(1),
             EndTime = DateTime.UtcNow.AddHours(2),
-            OwnerUserId = "owner1",
             MinNumberOfPlayers = 2,  // MUST respect game rules
             MaxNumberOfPlayers = 2   // Event allows only 2 players
         });
@@ -195,14 +183,12 @@ public class GameEventServiceTests
         // First participant
         await _service.AddParticipantAsync(new RegisterParticipantDto(
             created.Id,
-            "user1",
             "user1"
         ));
 
         // Second participant (fills the event)
         await _service.AddParticipantAsync(new RegisterParticipantDto(
             created.Id,
-            "user2",
             "user2"
         ));
 
@@ -210,7 +196,6 @@ public class GameEventServiceTests
         Func<Task> act = async () =>
             await _service.AddParticipantAsync(new RegisterParticipantDto(
                 created.Id,
-                "user3",
                 "user3"
             ));
 
@@ -226,13 +211,11 @@ public class GameEventServiceTests
         {
             GameId = 1,
             StartTime = DateTime.UtcNow.AddHours(1),
-            EndTime = DateTime.UtcNow.AddHours(2),
-            OwnerUserId = "owner1"
+            EndTime = DateTime.UtcNow.AddHours(2)
         });
 
         var dto = new RegisterParticipantDto(
             created.Id,
-            "user2",
             "user2"
         );
 
