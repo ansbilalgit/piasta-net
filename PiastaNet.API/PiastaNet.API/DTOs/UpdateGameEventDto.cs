@@ -11,6 +11,5 @@
         public int? MinNumberOfPlayers { get; set; }
         public int? MaxNumberOfPlayers { get; set; }
 
-        public string OwnerUserId { get; set; }
     }
 }

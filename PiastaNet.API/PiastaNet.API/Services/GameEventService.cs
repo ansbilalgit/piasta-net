@@ -1,19 +1,19 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PiastaNet.API.Data;
 using PiastaNet.API.DTOs;
 using PiastaNet.API.Models;
-using PiastaNet.API.Services;
+using System.Security.Claims;
 
 namespace PiastaNet.API.Services
 {
     public class GameEventService : IGameEventService
     {
         private readonly AppDbContext _context;
-
-        public GameEventService(AppDbContext context)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        public GameEventService(AppDbContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<GameEventResponseDto> CreateAsync(CreateGameEventDto dto)
@@ -33,10 +33,10 @@ namespace PiastaNet.API.Services
             var minPlayers = dto.MinNumberOfPlayers ?? gameMinPlayers ?? 1;
             var maxPlayers = dto.MaxNumberOfPlayers ?? gameMaxPlayers ?? 1;
 
-            if ( minPlayers < gameMinPlayers)
+            if (minPlayers < gameMinPlayers)
                 throw new Exception("Min players below allowed range");
 
-            if ( maxPlayers > gameMaxPlayers)
+            if (maxPlayers > gameMaxPlayers)
                 throw new Exception("Max players above allowed range");
 
             if (minPlayers > maxPlayers)
@@ -50,7 +50,7 @@ namespace PiastaNet.API.Services
                 EndTime = dto.EndTime,
                 MinNumberOfPlayers = minPlayers,
                 MaxNumberOfPlayers = maxPlayers,
-                OwnerUserId = dto.OwnerUserId,
+                OwnerUserId = GetCurrentUserId(),
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -68,7 +68,7 @@ namespace PiastaNet.API.Services
             if (entity == null)
                 throw new Exception("Game event not found");
 
-            if (entity.OwnerUserId != dto.OwnerUserId)
+            if (entity.OwnerUserId != GetCurrentUserId())
                 throw new UnauthorizedAccessException("Only owner can update");
 
             if (dto.StartTime >= dto.EndTime)
@@ -137,8 +137,8 @@ namespace PiastaNet.API.Services
                     OwnerUserId = e.OwnerUserId,
                     CreatedAt = e.CreatedAt,
                     Participants = e.Participants.Select(p => p.ParticipantUserId).Distinct().ToList()
-                })
-                .FirstOrDefaultAsync();
+                }).
+                FirstOrDefaultAsync();
         }
 
         public async Task<PagedResult<GameEventResponseDto>> GetAllAsync(
@@ -197,7 +197,7 @@ namespace PiastaNet.API.Services
             if (maxPlayers.HasValue)
                 query = query.Where(e => e.MaxNumberOfPlayers <= maxPlayers.Value);
 
-            
+
             //if (hasAvailableSlots == true)
             //{
             //    query = query.Where(e =>
@@ -256,9 +256,9 @@ namespace PiastaNet.API.Services
 
             return new PagedResult<GameEventResponseDto>(page, pageSize, totalCount, items);
         }
-    
-    
-    public async Task AddParticipantAsync(RegisterParticipantDto dto)
+
+
+        public async Task AddParticipantAsync(RegisterParticipantDto dto)
         {
 
             var gameEvent = await _context.GameEvents
@@ -269,8 +269,8 @@ namespace PiastaNet.API.Services
                 throw new Exception("GameEvent not found.");
 
             // Only owner or self
-            if (dto.RequestingUserID != gameEvent.OwnerUserId &&
-                dto.RequestingUserID != dto.ParticipantUserID)
+            if (GetCurrentUserId() != gameEvent.OwnerUserId &&
+                GetCurrentUserId() != dto.ParticipantUserID)
                 throw new UnauthorizedAccessException();
 
             // Max player check
@@ -281,13 +281,13 @@ namespace PiastaNet.API.Services
             // Prevent duplicate participant-requestedBy pair
             if (!gameEvent.Participants.Any(p =>
                     p.ParticipantUserId == dto.ParticipantUserID &&
-                    p.RequestedByUserId == dto.RequestingUserID))
+                    p.RequestedByUserId == GetCurrentUserId()))
             {
                 gameEvent.Participants.Add(new GameEventParticipant
                 {
                     GameEventId = gameEvent.Id,
                     ParticipantUserId = dto.ParticipantUserID,
-                    RequestedByUserId = dto.RequestingUserID
+                    RequestedByUserId = GetCurrentUserId()
                 });
 
                 await _context.SaveChangesAsync();
@@ -305,8 +305,8 @@ namespace PiastaNet.API.Services
                 throw new Exception("GameEvent not found.");
 
             // Only owner or self
-            if (dto.RequestingUserID != gameEvent.OwnerUserId &&
-                dto.RequestingUserID != dto.ParticipantUserID)
+            if (GetCurrentUserId() != gameEvent.OwnerUserId &&
+                GetCurrentUserId() != dto.ParticipantUserID)
                 throw new UnauthorizedAccessException();
 
             var participant = gameEvent.Participants
@@ -317,6 +317,11 @@ namespace PiastaNet.API.Services
                 gameEvent.Participants.Remove(participant);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public string GetCurrentUserId()
+        {
+            return _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
         }
     }
 }
