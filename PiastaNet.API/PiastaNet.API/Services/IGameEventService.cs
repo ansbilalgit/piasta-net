@@ -6,7 +6,7 @@ namespace PiastaNet.API.Services
     {
         Task<GameEventResponseDto> CreateAsync(CreateGameEventDto dto);
         Task<GameEventResponseDto> UpdateAsync(UpdateGameEventDto dto);
-        Task DeleteAsync(Guid id, string ownerUserId);
+        Task DeleteAsync(Guid id);
         Task<GameEventResponseDto> GetByIdAsync(Guid id);
         Task<PagedResult<GameEventResponseDto>> GetAllAsync(
     string? q,

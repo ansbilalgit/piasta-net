@@ -9,13 +9,11 @@
         public int? MinNumberOfPlayers { get; set; }
         public int? MaxNumberOfPlayers { get; set; }
 
-        public string? OwnerUserId { get; set; }
     }
 
     public record RegisterParticipantDto(
     Guid GameEventID,
-    string ParticipantUserID,
-    string RequestingUserID
+    string ParticipantUserID
 );
 
 }
